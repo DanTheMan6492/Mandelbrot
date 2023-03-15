@@ -2,14 +2,17 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
+
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.Timer;
 
-public class Driver extends JPanel implements ActionListener {
-	/* Attributes a.k.a. Instance Variables */
-	int w = 800, h = 800;
-	static final int MAXITERS = 200;
+public class Driver extends JPanel implements MouseListener, ActionListener {
+	
+	static final int WIDTH = 600, HEIGHT = 600;
+	static final int MAXITERS = 60;
 	Timer t;
 	
 	//{pos, r, g, b}
@@ -40,50 +43,52 @@ public class Driver extends JPanel implements ActionListener {
 	        {106,  52,   3}
 	    };
 	
+	//{x, y, width, height} (The x and y are of the bottom left corner
+	double[] BB = {-2.2, -1.5, 3, 3};
+	
+	double ppf = 0.95;
+	
+	public boolean pSelected = false;
+	public double[] pZoom = new double[2];
 	
 	
-	double hue = 0;
 	public void paint(Graphics g) {
 		super.paintComponent(g);
 		
 		basedMandelBrot(g);
-		
+		if(pSelected) update();
 		
 	}
 	
+	public void update() {
+		BB[0] = (BB[0]-pZoom[0])*ppf+pZoom[0];
+		BB[1] = (BB[1]-pZoom[1])*ppf+pZoom[1];
+		BB[2] = BB[2]*ppf;
+		BB[3] = BB[3]*ppf;
+	}
+	
 	public void basedMandelBrot(Graphics g) {
-		int[] origin = {w/2, h/2};
-		for(int x = -w/2; x < w/2; x++) {
-			for(int y = -w/2; y < w/2; y++) {
-				int t = checkValidMB(0, 0, 4.0*x/w, 4.0*y/w, 0);
+		
+		for(int x = 0; x < WIDTH; x++) {
+			for(int y = 0; y < HEIGHT; y++) {
+				double xc = (BB[2] * x / WIDTH) + BB[0];
+				double yc = (BB[3] * y / WIDTH) + BB[1];
+				int t = checkValidMB(0, 0, xc, yc, 0);
 				if(t == 0) g.setColor(Color.black);
 				else {
 					int[] rgb = pickcolorMB(t);
 					g.setColor(new Color(rgb[0], rgb[1], rgb[2]));
 				}
-				g.fillRect((int)(x+w/2), (int)(y+h/2), 1, 1);
+				g.fillRect(x, y, 1, 1);
 			}
 		}
 	}
 	
 	public int[] pickcolorMB(int iter) {
-		int[] rgb = new int[3];
-		double pos = 100 * iter / 256.0;
-		int i = 0;
-		while(CPfG[i][0] <= pos && i != 4) {i++;}
-		if(i != 4) {
-			double p = (CPfG[i][0]-pos)/(CPfG[i][0] - CPfG[i-1][0]);
-			rgb[0] = (int) (CPfG[i-1][1] * (1-p) + CPfG[i][1]*p);
-			rgb[1] = (int) (CPfG[i-1][2] * (1-p) + CPfG[i][3]*p);
-			rgb[2] = (int) (CPfG[i-1][2] * (1-p) + CPfG[i][3]*p);
-			return rgb;
-		}
-		double p = (1-pos)/(1 - CPfG[4][0]);
-		rgb[0] = (int) (CPfG[i-1][1] * (1-p) + CPfG[i][1]*p);
-		rgb[1] = (int) (CPfG[i-1][2] * (1-p) + CPfG[i][3]*p);
-		rgb[2] = (int) (CPfG[i-1][2] * (1-p) + CPfG[i][3]*p);
-		return rgb;
-	}
+        int i = (MAXITERS-iter) % 16;
+        if(i < 16) return MBpallet[i];
+        return new int[] {0, 0, 0};
+    }
 	
 	public static int checkValidMB(double a, double b, double c1, double c2, int iter) {
 		if(iter == MAXITERS) return 0;
@@ -94,26 +99,49 @@ public class Driver extends JPanel implements ActionListener {
 	}
 	
 	
-	
-	public void update() {
-	}// end of update method - put code above for any updates on variable
-	// ==================code above ===========================
+	@Override
+	public void mouseClicked(MouseEvent e) {
+		// TODO Auto-generated method stub
+		pSelected = true;
+		pZoom[0] = (BB[2] * (e.getX()- 7) / WIDTH) + BB[0];
+		pZoom[1] = (BB[3] * (e.getY()-31) / WIDTH) + BB[1];
+	}
+
+
 	@Override
 	public void actionPerformed(ActionEvent arg0) {
-		update();
 		repaint();
 	}
+	@Override
+	public void mousePressed(MouseEvent e) {
+		// TODO Auto-generated method stub
+	}
+	@Override
+	public void mouseReleased(MouseEvent e) {
+		// TODO Auto-generated method stub	
+	}
+	@Override
+	public void mouseEntered(MouseEvent e) {
+		// TODO Auto-generated method stub		
+	}
+	@Override
+	public void mouseExited(MouseEvent e) {
+		// TODO Auto-generated method stub
+		
+	}
+	
 	public static void main(String[] arg) {
-		Driver d = new Driver();
+		new Driver();
 	}
 	
 	public Driver() {
 		JFrame f = new JFrame();
-		f.setTitle("Pong");
-		f.setSize(w, h);
+		f.setTitle("MandelBrot");
+		f.setSize(WIDTH, HEIGHT);
 		f.setBackground(Color.BLACK);
 		f.setResizable(false);
 		f.add(this);
+		f.addMouseListener(this);
 		t = new Timer(7, this);
 		t.start();
 		f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
